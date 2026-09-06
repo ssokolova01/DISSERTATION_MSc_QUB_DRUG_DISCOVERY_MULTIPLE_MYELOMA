@@ -1,4 +1,4 @@
-# Preliminary analysis (with output).
+# Preliminary Dataset Analysis.
 > categories <- unique(pattern$Cluster_Combination) #number of table cell positions types in different types of tables
 > numberOfCategories <- length(categories)
 > categories
@@ -18,7 +18,7 @@
 > pattern_2_2_4_1x2 <- pattern %>% filter(Gene1_ClusterCount == 2, Gene2_ClusterCount == 2, TotalCluster_Combinations == 4, Cluster_Combination == "1_x_2", New_q_value <= 0.05)> print(nrow(pattern_2_2_4_1x2))
 
 # Code for automatization.
->cl_comb <- pattern_new %>% group_by(Gene1_ClusterCount, Gene2_ClusterCount, TotalCluster_Combinations, Cluster_Combination) %>% summarise(number = n())
+> cl_comb <- pattern_new %>% group_by(Gene1_ClusterCount, Gene2_ClusterCount, TotalCluster_Combinations, Cluster_Combination) %>% summarise(number = n())
 
 # Table type standardization
 > pattern <- read.table (file="../gdr/Combined_Binomial63million_padjusted_qvalLt0.05.txt", head = TRUE)
