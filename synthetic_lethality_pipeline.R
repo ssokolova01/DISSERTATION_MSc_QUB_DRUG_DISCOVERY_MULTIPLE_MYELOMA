@@ -1,14 +1,23 @@
+#===============================================================
+# Upload Libraries.
+#===============================================================
+> library(dplyr)
+> library(tidyr)
+> library(stringr)
+
+#=================================================================
 # Preliminary Dataset Analysis.
-> categories <- unique(pattern$Cluster_Combination) #number of table cell positions types in different types of tables
+#=================================================================
+
+# Explore categories and number of tables cell (Cluster Combination) types in different types of tables (Total Cluster Combinations).
+# Initial dataset was saved in `pattern` variable.
+
+> categories <- unique(pattern$Cluster_Combination)
 > numberOfCategories <- length(categories)
-> categories
-> numberOfCategories
+
+# Explore categories and number of Total Cluster Combinations.
 > categories_1 <- unique(pattern$TotalCluster_Combinations) #number of table types
 > numberOfCategories_1 <- length(categories_1)
-> categories_1
-> numberOfCategories_1
-> print(sort(categories_1))
-> print(sort(categories)) #more simple visualisation of the cell table type list
 
 > scf_count <- sw_pattern %>% group_by(Gene1_ClusterCount, Gene2_ClusterCount, TotalCluster_Combinations) %>% summarise(count=n()) %>% arrange(TotalCluster_Combinations)
 > scf_count %>% print(width=Inf)
@@ -23,9 +32,7 @@
 # Table type standardization
 > pattern <- read.table (file="../gdr/Combined_Binomial63million_padjusted_qvalLt0.05.txt", head = TRUE)
 > pattern_new <- na.omit(pattern)
-> library(dplyr)
-> library(tidyr)
-> library(stringr)
+
 > pattern_new <- pattern_new %>% separate_wider_delim(Cluster_Combination, delim = "_x_", names = c("first_cluster_id", "second_cluster_id"), cols_remove = FALSE)
 > pattern_new <- pattern_new %>% mutate(gene1_new = if_else(condition == TRUE, Gene2, Gene1), gene1_cc_new = if_else(condition == TRUE, Gene2_ClusterCount, Gene1_ClusterCount), Gene2 = if_else(condition == TRUE, Gene1, Gene2), Gene2_ClusterCount = if_else(condition == TRUE, Gene1_ClusterCount, Gene2_ClusterCount), ClusterComb_new = if_else(condition == TRUE, second_cluster_id, first_cluster_id), second_cluster_id = if_else(condition == TRUE, first_cluster_id, second_cluster_id))
 > pattern_new <- pattern_new %>% select(-Gene1, Gene1 = gene1_new, -Gene1_ClusterCount, Gene1_ClusterCount = gene1_cc_new, -Cluster_Combination, -condition, -first_cluster_id, first_cluster_id = ClusterComb_new)
