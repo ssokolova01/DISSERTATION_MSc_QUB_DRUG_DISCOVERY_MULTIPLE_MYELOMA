@@ -11,6 +11,7 @@
 # Upload Libraries.
 #===============================================================
 > library(dplyr)
+> library(tidyverse)
 > library(tidyr)
 > library(stringr)
 
@@ -43,21 +44,53 @@
 #=====================================================================
 # Standartization of Total Cluster Combinations table types. 
 #=====================================================================
-# Data Integrity Protection: To bypass the **simultaneous variable overwriting** problem inherent to sequential column transposition, 
-# the pipeline temporarily routes data through explicit staging variables (`gene1_new`, `gene1_cc_new`). 
-# This layout prevents memory collisions and structural data loss during the matrix transposition loop.
+# STEP 1. **Setting the Condition**:
+# Create in the dataset an additional column with TRUE/FALSE conditions which then indicate where data from Gene1/Gene2, Gene1_ClusterCount/Gene2_ClusterCount, first_cluster_id/second_cluster_id columns should be swapped.
 
-# Splitting the coordinates to into two separate numbers so that they could be evaluated individually.
-> sw_pattern <- pattern_new %>% separate_wider_delim(Cluster_Combination, delim = "_x_", names = c("first_cluster_id", "second_cluster_id"), cols_remove = FALSE)
-# The Variable Swap: If the condition is true, the value of Gene2 is copied into a new temporary column gene1_new. 
-# If condition is false (positions are already correct), the value is kept as Gene1. 
-# This logic is repeated to swap Gene1 and Gene2 table parameters according to their new coordinate positions.
-> sw_pattern <- sw_pattern %>% mutate(gene1_new = if_else(condition == TRUE, Gene2, Gene1), gene1_cc_new = if_else(condition == TRUE, Gene2_ClusterCount, Gene1_ClusterCount), Gene2 = if_else(condition == TRUE, Gene1, Gene2), Gene2_ClusterCount = if_else(condition == TRUE, Gene1_ClusterCount, Gene2_ClusterCount), ClusterComb_new = if_else(condition == TRUE, second_cluster_id, first_cluster_id), second_cluster_id = if_else(condition == TRUE, first_cluster_id, second_cluster_id))
+> pattern_new$condition <- pattern_new$Gene1_ClusterCount > pattern_new$Gene2_ClusterCount
+
+# STEP 2. **Splitting the Cluster_Combination Coordinates**: create two separate indices so that they could be treated individually.
+# Separate Cluster_Combination column in two columns, `first_cluster_id` and `second_cluster_id`, to swap the cluster ids in cluster combinations.
+
+> pattern_new <- pattern_new %>% separate_wider_delim(Cluster_Combination, delim = "_x_", names = c("first_cluster_id", "second_cluster_id"), cols_remove = FALSE)
+
+# STEP 3. **Swap the Variables**: Data for Genes, Gene_ClusterCount and Cluster_Combination were swapped between the columns according the estimated condition.
+# Data Integrity Protection: 
+# To bypass the simultaneous variable overwriting problem inherent to sequential column transposition, 
+# the pipeline temporarily routes data through explicit staging variables (`gene1_new`, `gene1_cc_new`, `ClusterComb_new`). 
+# This layout prevents memory collisions and structural data loss during the matrix transposition loop.
+# Generation of New Columns:
+# For storage of information from the `Gene2` column, new column `gene1_new` is created.
+# For storage of information from the `Gene2_ClusterCount` column, new column `gene1_cc_new column` is created. 
+# For storage of indices from `Cluster_Combination` column, new column `ClusterComb_new` is created to switch the data between `first_cluster_id` and `second_cluster_id` columns.
+# Swap the Data Based on Condition:
+# If the condition is TRUE, the value of `Gene2` column is copied into a new temporary column `gene1_new`. 
+# If the condition is TRUE, the value of `Gene2_ClusterCount` column is copied into a new temporary column `gene1_cc_new`. 
+# For the `Cluster_Combination` column indices, if the condition is TRUE, `second_cluster_id` is copied to the `ClusterComb_new` column. 
+# Create a new variable for the transformed initial dataset with new columns.
+
+> sw_pattern <- pattern_new %>% mutate(gene1_new = if_else(condition == TRUE, Gene2, Gene1), 
+                                      gene1_cc_new = if_else(condition == TRUE, Gene2_ClusterCount, Gene1_ClusterCount), 
+                                      Gene2 = if_else(condition == TRUE, Gene1, Gene2), 
+                                      Gene2_ClusterCount = if_else(condition == TRUE, Gene1_ClusterCount, Gene2_ClusterCount), 
+                                      ClusterComb_new = if_else(condition == TRUE, second_cluster_id, first_cluster_id), 
+                                      second_cluster_id = if_else(condition == TRUE, first_cluster_id, second_cluster_id))
+
+# STEP 4. **Cleaning and Renaming Columns:** Assign names to newly created columns containing swapped information from `Gene2`, `Gene2_ClusterCount` and `second_cluster_id` columns and delete old columns.
+
 > sw_pattern <- sw_pattern %>% select(-Gene1, Gene1 = gene1_new, -Gene1_ClusterCount, Gene1_ClusterCount = gene1_cc_new, -Cluster_Combination, -condition, -first_cluster_id, first_cluster_id = ClusterComb_new)
+
+# STEP 5. Unite two columns with Cluster Combination indices in one column Cluster_Combination as it was in the initial dataset. 
+
 > sw_pattern <- sw_pattern %>% unite("Cluster_Combination", c(first_cluster_id, second_cluster_id), sep = "_x_")
+
+# STEP 5. **Reorganization of Column Positions:** Reorder column positions according to the initial dataset order.
+
 > sw_pattern <- sw_pattern %>% relocate(Gene1)
 > sw_pattern <- sw_pattern %>% relocate(Gene1_ClusterCount, .after = Gene2)
 > sw_pattern <- sw_pattern %>% relocate(Cluster_Combination, .after = TotalCluster_Combinations)
+
+# Save new dataset in a file. 
 > Switched_Pattern <- write.csv(sw_pattern, row.names=TRUE, file="/home/svetlana/switch/Switched_Pattern.txt")
 
 # Explore counts of Cluster Combination types for each Total Cluster Combinations table type in new dataset with standardized Total Cluster Combinations table types.
@@ -65,12 +98,14 @@
 > scf_count <- sw_pattern %>% group_by(Gene1_ClusterCount, Gene2_ClusterCount, TotalCluster_Combinations) %>% summarise(count=n()) %>% arrange(TotalCluster_Combinations)
 
 #=============================================================================================================================================
+# Generating Combination Dataset (Table with Unique Gene Pairs' Co-Expression Table Characteristics, or Co-Expression Patterns)
+#=============================================================================================================================================
 # Generation of the Pattern table with all exisiting Cluster Combination (single or multiple) for each Total Cluster Combination table type. 
 # Cluster Combinations are included in a pattern based on the fact of the lethality event emerged in this genes' co-expression level. 
 # These patterns are the unified transcriptomic signature inventory individual for a certain set of gene pairs.
-#=============================================================================================================================================
+
 # Creating combinations table
-> Comb <- sw_pat %>% select(Gene1, Gene2, Gene1_ClusterCount, Gene2_ClusterCount, TotalCluster_Combinations, Cluster_Combination) %>% distinct() 
+> Comb <- sw_pattern %>% select(Gene1, Gene2, Gene1_ClusterCount, Gene2_ClusterCount, TotalCluster_Combinations, Cluster_Combination) %>% distinct() 
                 %>% group_by(Gene1, Gene2, Gene1_ClusterCount, Gene2_ClusterCount, TotalCluster_Combinations) 
                 %>% arrange(Cluster_Combination) 
                 %>% summarise(Result_Comb = str_c(Cluster_Combination, collapse = ".")) 
