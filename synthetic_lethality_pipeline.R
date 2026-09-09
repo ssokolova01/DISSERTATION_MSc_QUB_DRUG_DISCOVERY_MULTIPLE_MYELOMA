@@ -37,29 +37,45 @@
 # Explore counts of Cluster Combination types for each Total Cluster Combinations table type.
 # Example of code for cluster combination count “by hand”.
 > pattern_2_2_4_1x2 <- pattern_new %>% filter(Gene1_ClusterCount == 2, Gene2_ClusterCount == 2, TotalCluster_Combinations == 4, Cluster_Combination == "1_x_2", New_q_value <= 0.05)> print(nrow(pattern_2_2_4_1x2))
-# Code for automatization.
+# Code for automatization of Cluster Combination type count for each Total Cluster Combinations table type.
 > cl_comb <- pattern_new %>% group_by(Gene1_ClusterCount, Gene2_ClusterCount, TotalCluster_Combinations, Cluster_Combination) %>% summarise(number = n())
 
-# Table type standardization
-> pattern_new <- pattern_new %>% separate_wider_delim(Cluster_Combination, delim = "_x_", names = c("first_cluster_id", "second_cluster_id"), cols_remove = FALSE)
-> pattern_new <- pattern_new %>% mutate(gene1_new = if_else(condition == TRUE, Gene2, Gene1), gene1_cc_new = if_else(condition == TRUE, Gene2_ClusterCount, Gene1_ClusterCount), Gene2 = if_else(condition == TRUE, Gene1, Gene2), Gene2_ClusterCount = if_else(condition == TRUE, Gene1_ClusterCount, Gene2_ClusterCount), ClusterComb_new = if_else(condition == TRUE, second_cluster_id, first_cluster_id), second_cluster_id = if_else(condition == TRUE, first_cluster_id, second_cluster_id))
-> pattern_new <- pattern_new %>% select(-Gene1, Gene1 = gene1_new, -Gene1_ClusterCount, Gene1_ClusterCount = gene1_cc_new, -Cluster_Combination, -condition, -first_cluster_id, first_cluster_id = ClusterComb_new)
-> pattern_new <- pattern_new %>% unite("Cluster_Combination", c(first_cluster_id, second_cluster_id), sep = "_x_")
-> pattern_new <- pattern_new %>% relocate(Gene1)
-> pattern_new <- pattern_new %>% relocate(Gene1_ClusterCount, .after = Gene2)
-> pattern_new <- pattern_new %>% relocate(Cluster_Combination, .after = TotalCluster_Combinations)
-> Switched_Pattern <- write.csv(pattern_new, row.names=TRUE, file="/home/svetlana/switch/Switched_Pattern.txt")
-> pattern_new %>% print(width = Inf)
+#=====================================================================
+# Standartization of Total Cluster Combinations table types. 
+#=====================================================================
+# Data Integrity Protection: To bypass the **simultaneous variable overwriting** problem inherent to sequential column transposition, 
+# the pipeline temporarily routes data through explicit staging variables (`gene1_new`, `gene1_cc_new`). 
+# This layout prevents memory collisions and structural data loss during the matrix transposition loop.
 
+# Splitting the coordinates to into two separate numbers so that they could be evaluated individually.
+> sw_pattern <- pattern_new %>% separate_wider_delim(Cluster_Combination, delim = "_x_", names = c("first_cluster_id", "second_cluster_id"), cols_remove = FALSE)
+# The Variable Swap: If the condition is true, the value of Gene2 is copied into a new temporary column gene1_new. 
+# If condition is false (positions are already correct), the value is kept as Gene1. 
+# This logic is repeated to swap Gene1 and Gene2 table parameters according to their new coordinate positions.
+> sw_pattern <- sw_pattern %>% mutate(gene1_new = if_else(condition == TRUE, Gene2, Gene1), gene1_cc_new = if_else(condition == TRUE, Gene2_ClusterCount, Gene1_ClusterCount), Gene2 = if_else(condition == TRUE, Gene1, Gene2), Gene2_ClusterCount = if_else(condition == TRUE, Gene1_ClusterCount, Gene2_ClusterCount), ClusterComb_new = if_else(condition == TRUE, second_cluster_id, first_cluster_id), second_cluster_id = if_else(condition == TRUE, first_cluster_id, second_cluster_id))
+> sw_pattern <- sw_pattern %>% select(-Gene1, Gene1 = gene1_new, -Gene1_ClusterCount, Gene1_ClusterCount = gene1_cc_new, -Cluster_Combination, -condition, -first_cluster_id, first_cluster_id = ClusterComb_new)
+> sw_pattern <- sw_pattern %>% unite("Cluster_Combination", c(first_cluster_id, second_cluster_id), sep = "_x_")
+> sw_pattern <- sw_pattern %>% relocate(Gene1)
+> sw_pattern <- sw_pattern %>% relocate(Gene1_ClusterCount, .after = Gene2)
+> sw_pattern <- sw_pattern %>% relocate(Cluster_Combination, .after = TotalCluster_Combinations)
+> Switched_Pattern <- write.csv(sw_pattern, row.names=TRUE, file="/home/svetlana/switch/Switched_Pattern.txt")
 
-
+# Explore counts of Cluster Combination types for each Total Cluster Combinations table type in new dataset with standardized Total Cluster Combinations table types.
+# Automatized version. 
 > scf_count <- sw_pattern %>% group_by(Gene1_ClusterCount, Gene2_ClusterCount, TotalCluster_Combinations) %>% summarise(count=n()) %>% arrange(TotalCluster_Combinations)
-> scf_count %>% print(width=Inf)
 
-
+#=============================================================================================================================================
+# Generation of the Pattern table with all exisiting Cluster Combination (single or multiple) for each Total Cluster Combination table type. 
+# Cluster Combinations are included in a pattern based on the fact of the lethality event emerged in this genes' co-expression level. 
+# These patterns are the unified transcriptomic signature inventory individual for a certain set of gene pairs.
+#=============================================================================================================================================
 # Creating combinations table
-> Comb <- sw_pat %>% select(Gene1, Gene2, Gene1_ClusterCount, Gene2_ClusterCount, TotalCluster_Combinations, Cluster_Combination) %>% distinct() %>% group_by(Gene1, Gene2, Gene1_ClusterCount, Gene2_ClusterCount, TotalCluster_Combinations) %>% arrange(Cluster_Combination) %>% summarise(Result_Comb = str_c(Cluster_Combination, collapse = ".")) %>% arrange(nchar(Result_Comb), Result_Comb) %>% ungroup()
-> Comb %>% print(width=Inf, 1:5,)
+> Comb <- sw_pat %>% select(Gene1, Gene2, Gene1_ClusterCount, Gene2_ClusterCount, TotalCluster_Combinations, Cluster_Combination) %>% distinct() 
+                %>% group_by(Gene1, Gene2, Gene1_ClusterCount, Gene2_ClusterCount, TotalCluster_Combinations) 
+                %>% arrange(Cluster_Combination) 
+                %>% summarise(Result_Comb = str_c(Cluster_Combination, collapse = ".")) 
+                %>% arrange(nchar(Result_Comb), Result_Comb) 
+                %>% ungroup()
 
 # Creating combination tables for each table type (example for 4-cell table).
 > comb4 <- Comb %>% filter(TotalCluster_Combinations == 4) %>% arrange(nchar(Result_Comb))
@@ -67,9 +83,10 @@
 # Combination count for each table type (example for 4-cell table).
 > comb4_n <- comb4 %>% group_by(Result_Comb) %>% summarise(count=n()) %>% arrange(desc(count))
 > length(comb4_n)
-> comb4_n
 
+#==================================================================================
 # Creating gene pairs and single gene list
+#==================================================================================
 > genes_pairs_4 <- comb4 %>% filter(Result_Comb == "2_x_1")
 > genes_pairs_4[1:3,]
 > length(genes_pairs_4$Result_Comb)
