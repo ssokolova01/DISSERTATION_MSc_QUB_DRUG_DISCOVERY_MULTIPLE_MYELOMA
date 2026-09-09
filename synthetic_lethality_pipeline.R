@@ -1,3 +1,12 @@
+# PIPELINE FOR TRANSCRIPTOMIC DATASET ANALYSIS ISSUED FROM MULTISEP PRE-TREATMENT
+# DESCRIPTION OF DATASET ORIGIN:
+# A precursor dataset was obtained from: 
+# The MMRF (Multiple Myeloma Research Foundation) 
+# CoMMpass (Clinical Outcomes in Multiple Myeloma to Personal Assessment) data resource (https://themmrf.org/; Shaw, 2021; Settino, 2021), 
+# IA21 data section, “Expression Estimates – Gene Based” rubric: ‘MMRF_CoMMpass_IA21_salmon_geneUnstranded_tpm.tsv’. 
+# It was processed using the MultiSEp package in R. (Wappett et al., 2021; https://www.overton-lab.uk/app/synlegg/#tuid)
+# Using the MultiSEp algorithm, RNA-seq data can be statistically processed, decomposed, and restructured to identify cell clusters formed by different gene expressions. 
+# (MultiSEp Analysis was run in the Ian Overton Laboratory by PhD student Adeline McKie)
 #===============================================================
 # Upload Libraries.
 #===============================================================
@@ -5,34 +14,33 @@
 > library(tidyr)
 > library(stringr)
 
+#================================================================
+# Uploading Dataset.
+#================================================================
+# Initial dataset was saved in `pattern` variable, the cleaned original dataset was saved in `pattern_new` variable.
+> pattern <- read.table (file="../gdr/Combined_Binomial63million_padjusted_qvalLt0.05.txt", head = TRUE)
+
+# Removing rows containing NA values.
+> pattern_new <- na.omit(pattern)
+
 #=================================================================
 # Preliminary Dataset Analysis.
 #=================================================================
-
-# Explore categories and number of tables cell (Cluster Combination) types in different types of tables (Total Cluster Combinations).
-# Initial dataset was saved in `pattern` variable.
-
-> categories <- unique(pattern$Cluster_Combination)
+# Explore categories and total number of table cells (Cluster Combination) types in different types of tables (Total Cluster Combinations).
+> categories <- unique(pattern_new$Cluster_Combination)
 > numberOfCategories <- length(categories)
 
-# Explore categories and number of Total Cluster Combinations.
-> categories_1 <- unique(pattern$TotalCluster_Combinations) #number of table types
+# Explore categories and total number of Total Cluster Combinations types.
+> categories_1 <- unique(pattern_new$TotalCluster_Combinations) #number of table types
 > numberOfCategories_1 <- length(categories_1)
 
-> scf_count <- sw_pattern %>% group_by(Gene1_ClusterCount, Gene2_ClusterCount, TotalCluster_Combinations) %>% summarise(count=n()) %>% arrange(TotalCluster_Combinations)
-> scf_count %>% print(width=Inf)
-
-# Cluster Combination count.
+# Explore counts of Cluster Combination types for each Total Cluster Combinations table type.
 # Example of code for cluster combination count “by hand”.
-> pattern_2_2_4_1x2 <- pattern %>% filter(Gene1_ClusterCount == 2, Gene2_ClusterCount == 2, TotalCluster_Combinations == 4, Cluster_Combination == "1_x_2", New_q_value <= 0.05)> print(nrow(pattern_2_2_4_1x2))
-
+> pattern_2_2_4_1x2 <- pattern_new %>% filter(Gene1_ClusterCount == 2, Gene2_ClusterCount == 2, TotalCluster_Combinations == 4, Cluster_Combination == "1_x_2", New_q_value <= 0.05)> print(nrow(pattern_2_2_4_1x2))
 # Code for automatization.
 > cl_comb <- pattern_new %>% group_by(Gene1_ClusterCount, Gene2_ClusterCount, TotalCluster_Combinations, Cluster_Combination) %>% summarise(number = n())
 
 # Table type standardization
-> pattern <- read.table (file="../gdr/Combined_Binomial63million_padjusted_qvalLt0.05.txt", head = TRUE)
-> pattern_new <- na.omit(pattern)
-
 > pattern_new <- pattern_new %>% separate_wider_delim(Cluster_Combination, delim = "_x_", names = c("first_cluster_id", "second_cluster_id"), cols_remove = FALSE)
 > pattern_new <- pattern_new %>% mutate(gene1_new = if_else(condition == TRUE, Gene2, Gene1), gene1_cc_new = if_else(condition == TRUE, Gene2_ClusterCount, Gene1_ClusterCount), Gene2 = if_else(condition == TRUE, Gene1, Gene2), Gene2_ClusterCount = if_else(condition == TRUE, Gene1_ClusterCount, Gene2_ClusterCount), ClusterComb_new = if_else(condition == TRUE, second_cluster_id, first_cluster_id), second_cluster_id = if_else(condition == TRUE, first_cluster_id, second_cluster_id))
 > pattern_new <- pattern_new %>% select(-Gene1, Gene1 = gene1_new, -Gene1_ClusterCount, Gene1_ClusterCount = gene1_cc_new, -Cluster_Combination, -condition, -first_cluster_id, first_cluster_id = ClusterComb_new)
@@ -42,6 +50,12 @@
 > pattern_new <- pattern_new %>% relocate(Cluster_Combination, .after = TotalCluster_Combinations)
 > Switched_Pattern <- write.csv(pattern_new, row.names=TRUE, file="/home/svetlana/switch/Switched_Pattern.txt")
 > pattern_new %>% print(width = Inf)
+
+
+
+> scf_count <- sw_pattern %>% group_by(Gene1_ClusterCount, Gene2_ClusterCount, TotalCluster_Combinations) %>% summarise(count=n()) %>% arrange(TotalCluster_Combinations)
+> scf_count %>% print(width=Inf)
+
 
 # Creating combinations table
 > Comb <- sw_pat %>% select(Gene1, Gene2, Gene1_ClusterCount, Gene2_ClusterCount, TotalCluster_Combinations, Cluster_Combination) %>% distinct() %>% group_by(Gene1, Gene2, Gene1_ClusterCount, Gene2_ClusterCount, TotalCluster_Combinations) %>% arrange(Cluster_Combination) %>% summarise(Result_Comb = str_c(Cluster_Combination, collapse = ".")) %>% arrange(nchar(Result_Comb), Result_Comb) %>% ungroup()
