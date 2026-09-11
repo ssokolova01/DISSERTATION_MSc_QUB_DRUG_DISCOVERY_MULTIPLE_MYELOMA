@@ -41,9 +41,14 @@
 # Code for automatization of Cluster Combination type count for each Total Cluster Combinations table type.
 > cl_comb <- pattern_new %>% group_by(Gene1_ClusterCount, Gene2_ClusterCount, TotalCluster_Combinations, Cluster_Combination) %>% summarise(number = n())
 
-#=====================================================================
+#====================================================================================================================================
 # Standartization of Total Cluster Combinations table types. 
-#=====================================================================
+#=====================================================================================================================================
+# Transformation of the initial dataset into a new dataset where all Total Cluster Combination table types (n x m) have n < m.
+# Example: Table types with form 3x2, 4x2, 4x3, 5x2, 5x4 transformed accordingly into 2x3, 2x4, 3x4, 2x5, 4x5. 
+# Result: The standardization step reduce the number of table types and make analysis more efficient.
+# Method: Because data was swapped in all columns reflecting gene pair co-expression levels (Gene1, Gene2, Gene1_ClusterCount, Gene2_ClusterCount, Cluster_Combination), new dataset preserve this information correctly.
+
 # STEP 1. **Setting the Condition**:
 # Create in the dataset an additional column with TRUE/FALSE conditions which then indicate where data from Gene1/Gene2, Gene1_ClusterCount/Gene2_ClusterCount, first_cluster_id/second_cluster_id columns should be swapped.
 
@@ -97,11 +102,13 @@
 # Automatized version. 
 > scf_count <- sw_pattern %>% group_by(Gene1_ClusterCount, Gene2_ClusterCount, TotalCluster_Combinations) %>% summarise(count=n()) %>% arrange(TotalCluster_Combinations)
 
-#=============================================================================================================================================
+#==================================================================================================================================================================================
 # Generating Combination Dataset (Table with Unique Gene Pairs' Co-Expression Table Characteristics, or Co-Expression Patterns)
-#=============================================================================================================================================
-# Generation of the Pattern table with all exisiting Cluster Combination (single or multiple) for each Total Cluster Combination table type. 
-# Cluster Combinations are included in a pattern based on the fact of the lethality event emerged in this genes' co-expression level. 
+#==================================================================================================================================================================================
+# Generation of the Pattern table with combinations of Cluster Combinations corresponding to each gene pair.
+# Each gene pair can have only one type of combination of Cluster Combinations in only one table type. 
+# Combination of Cluster Combinations can contain single or multiple Cluster Combinations (e.g. single: 1_x_1, multiple: 1_x_1.2_x_1.2_x_2).
+# Cluster Combinations are included in a pattern based on the fact of the lethality event emerged in this genes' co-expression level (table coordinate). 
 # These patterns are the unified transcriptomic signature inventory individual for a certain set of gene pairs.
 
 # Creating combinations table
@@ -112,26 +119,26 @@
                 %>% arrange(nchar(Result_Comb), Result_Comb) 
                 %>% ungroup()
 
-# Creating combination tables for each table type (example for 4-cell table).
+# Creating combination tables for each table type by filtering Combination Dataset by TotalCluster_Combination type (example for 4-cell table).
 > comb4 <- Comb %>% filter(TotalCluster_Combinations == 4) %>% arrange(nchar(Result_Comb))
 
-# Combination count for each table type (example for 4-cell table).
+# Combination count for each table type (example for 4-cell table). 
+# Shows both existing combinations and their number.
 > comb4_n <- comb4 %>% group_by(Result_Comb) %>% summarise(count=n()) %>% arrange(desc(count))
 > length(comb4_n)
 
-#==================================================================================
+#============================================================================================================================================================
 # Creating gene pairs and single gene list
-#==================================================================================
+#============================================================================================================================================================
+# Based on the combination count, the most numerous combinations for each table type were chosen to create gene lists for subsequent enrichment analysis.
 > genes_pairs_4 <- comb4 %>% filter(Result_Comb == "2_x_1")
-> genes_pairs_4[1:3,]
 > length(genes_pairs_4$Result_Comb)
 > unique_gp_4 <- genes_pairs_4 %>% distinct(Gene1, Gene2)
-> unique_gp_4[1:3,]
 > length(unique_gp_4$Gene1)
 > length(unique_gp_4$Gene2)
 > gene_list_4 <- unique_gp_4 %>% pivot_longer(c(Gene1, Gene2), values_to = "Genes") %>% select(-name) %>% distinct(Genes) %>% arrange(Genes)
-> head(gene_list_4)
-> gene_list_4 %>% print(width=Inf, 1:3)
+
+
 
 
 
