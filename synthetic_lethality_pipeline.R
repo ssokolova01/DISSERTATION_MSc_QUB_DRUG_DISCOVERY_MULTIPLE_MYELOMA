@@ -89,7 +89,7 @@
 
 > sw_pattern <- sw_pattern %>% unite("Cluster_Combination", c(first_cluster_id, second_cluster_id), sep = "_x_")
 
-# STEP 5. **Reorganization of Column Positions:** Reorder column positions according to the initial dataset order.
+# STEP 6. **Reorganization of Column Positions:** Reorder column positions according to the initial dataset order.
 
 > sw_pattern <- sw_pattern %>% relocate(Gene1)
 > sw_pattern <- sw_pattern %>% relocate(Gene1_ClusterCount, .after = Gene2)
