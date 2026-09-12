@@ -37,7 +37,8 @@ numberOfCategories_1 <- length(categories_1)
 
 # Explore counts of Cluster Combination types for each Total Cluster Combinations table type.
 # Example of code for cluster combination count “by hand”.
-pattern_2_2_4_1x2 <- pattern_new %>% filter(Gene1_ClusterCount == 2, Gene2_ClusterCount == 2, TotalCluster_Combinations == 4, Cluster_Combination == "1_x_2", New_q_value <= 0.05)> print(nrow(pattern_2_2_4_1x2))
+pattern_2_2_4_1x2 <- pattern_new %>% filter(Gene1_ClusterCount == 2, Gene2_ClusterCount == 2, TotalCluster_Combinations == 4, Cluster_Combination == "1_x_2", New_q_value <= 0.05)
+
 # Code for automatization of Cluster Combination type count for each Total Cluster Combinations table type.
 cl_comb <- pattern_new %>% group_by(Gene1_ClusterCount, Gene2_ClusterCount, TotalCluster_Combinations, Cluster_Combination) %>% summarise(number = n())
 
