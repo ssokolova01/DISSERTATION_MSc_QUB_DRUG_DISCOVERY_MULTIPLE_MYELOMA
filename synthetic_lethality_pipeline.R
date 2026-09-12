@@ -19,7 +19,7 @@ library(stringr)
 # Uploading Dataset.
 #================================================================
 # Initial dataset was saved in `pattern` variable, the cleaned original dataset was saved in `pattern_new` variable.
-pattern <- read.table (file="../gdr/Combined_Binomial63million_padjusted_qvalLt0.05.txt", head = TRUE)
+pattern <- read.table (file="../multisep_significant_cluster_combinations.txt", head = TRUE)
 
 # Removing rows containing NA values.
 pattern_new <- na.omit(pattern)
